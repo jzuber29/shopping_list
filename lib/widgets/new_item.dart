@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/category.dart';
+import 'package:shopping_list/models/grocery_item.dart';
+import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -11,12 +15,35 @@ class NewItem extends StatefulWidget {
 
 class _NewItemState extends State<NewItem> {
   final _formKey = GlobalKey<FormState>();
+  var _enteredName='';
+  var _enteredQuantity=1;
+  var _selectedCategory=categories[Categories.vegetables]!;
 
-  void _saveItem() {
-    final isValid = _formKey.currentState!.validate();
-    if (!isValid) return;
+  void _saveItem()async {
+     if (_formKey.currentState!.validate())
+     {
+ _formKey.currentState!.save();
+ final url=Uri.https('flutter-prep-64e86-default-rtdb.firebaseio.com','shopping-list.json');
+ final response=await http.post(url, headers: {
+  'Content-Type':'application/json',
+ },
+ body: json.encode({
+  'name': _enteredName, 
+  'quantity': _enteredQuantity,
+   'category':_selectedCategory.title,
 
-  
+ },),
+ );
+ print(response.body);
+ print (response .statusCode);
+if (!context.mounted){
+  return;
+}
+
+ Navigator.of(context).pop();
+   
+ 
+     }
   }
 
   @override
@@ -45,6 +72,12 @@ class _NewItemState extends State<NewItem> {
                   }
                   return null;
                 },
+                onSaved: (value){
+                  // if (value==null){
+                  //   return;
+                  // }
+                  _enteredName=value!;
+                },
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -55,7 +88,7 @@ class _NewItemState extends State<NewItem> {
                         label: Text('Quantity'),
                       ),
                       keyboardType: TextInputType.number,
-                      initialValue: '1',
+                      initialValue: _enteredQuantity.toString(),
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty ||
@@ -65,11 +98,15 @@ class _NewItemState extends State<NewItem> {
                         }
                         return null;
                       },
+                      onSaved: (value){
+                        _enteredQuantity=int .parse(value!);
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField(
+                      value: _selectedCategory,
                       items: [
                         for (final category in categories.entries)
                           DropdownMenuItem(
@@ -87,7 +124,13 @@ class _NewItemState extends State<NewItem> {
                             ),
                           ),
                       ],
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory=value!;
+                        });
+                        
+                        
+                      },
                     ),
                   ),
                 ],
